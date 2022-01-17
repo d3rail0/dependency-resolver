@@ -1,3 +1,4 @@
 pygccxml
 libclang
 global_logger
+pygame
