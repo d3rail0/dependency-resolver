@@ -5,7 +5,18 @@
 #include <iostream>
 #include <vector>
 
-// #include "Faculty.h"
+#include "Professor.h"
+
+#ifdef __linux__ 
+    //linux code goes here
+#elif _WIN32
+    // windows code goes here
+	// #include "Faculty.h"
+#else
+
+#endif
+
+//#include "Faculty.h"
 
 class Professor : public Person {
 private:
