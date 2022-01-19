@@ -14,11 +14,16 @@ import pygame
 # State
 from src.states.menu import Menu
 
+from src.camera import Camera
+
 class Resolver():
 
     def __init__(self) -> None:
         pygame.init()
 
+        self.__FPS_LIMIT = 60
+        self.__fps_clock = pygame.time.Clock()
+        
         # Don't show tkinter window
         tkinter.Tk().withdraw()
         
@@ -30,13 +35,15 @@ class Resolver():
         self.VIEW_W  , self.VIEW_H   = 1024, 860
         self.SCREEN_W, self.SCREEN_H = 1024, 860
 
+        self.camera = Camera(0, 0, self.VIEW_W, self.VIEW_H)
+
         self.canvas          = pygame.Surface((self.VIEW_W, self.VIEW_H))
         self.display_surface = pygame.display.set_mode((self.SCREEN_W, self.SCREEN_H), pygame.RESIZABLE)
 
         self.is_running  = True
         self.state_stack = []
         self.fps_list    = []
-        self.actions     = {"left": False, "right": False, "up" : False, "down" : False, "m_down" : False, "m_up" : False, "escape": True}
+        self.actions     = {"left": False, "right": False, "up" : False, "down" : False, "m_down" : False, "m_up" : False, "escape": False}
         
         self.dt     , self.prev_time = 0, 0
         self.mouse_x, self.mouse_y   = 0, 0
@@ -57,6 +64,9 @@ class Resolver():
 
             self.__render()
 
+            # limit FPS
+            self.__fps_clock.tick(self.__FPS_LIMIT)
+
     def __update_interpolators(self):
         self.interp_x = util.make_interpolator([0, self.display_surface.get_size()[0]], [0, self.VIEW_W])
         self.interp_y = util.make_interpolator([0, self.display_surface.get_size()[1]], [0, self.VIEW_H])
@@ -66,7 +76,9 @@ class Resolver():
         self.mouse_y = int(self.interp_y(self.mouse_y))
 
     def __capture_events(self) -> None:
+
         for event in pygame.event.get():
+
             if event.type == pygame.QUIT:
                 self.is_running = False
             elif event.type == pygame.MOUSEMOTION:
@@ -84,13 +96,15 @@ class Resolver():
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     self.actions['escape'] = True
+                elif event.key == pygame.K_LEFT:
+                    self.actions['left'] = True
             elif event.type == pygame.KEYUP:
                 if event.key == pygame.K_ESCAPE:
-                    self.actions['escape'] = False
-                
-            
-            
-            self.__fix_mouse_pos()
+                    self.actions['escape'] = False            
+                elif event.key == pygame.K_LEFT:
+                    self.actions['left'] = False
+                    
+        self.__fix_mouse_pos()
 
     def __update_dt(self) -> None:
         now            = time.time()
@@ -112,7 +126,15 @@ class Resolver():
 
     def __render(self) -> None:
         self.state_stack[-1].render(self.canvas)
-        self.display_surface.blit(pygame.transform.scale(self.canvas, self.display_surface.get_size()), (0,0))
+
+        self.display_surface.blit(
+            pygame.transform.scale(
+                self.canvas, 
+                self.display_surface.get_size()
+            ), 
+            (0, 0)
+        )
+
         pygame.display.flip()
     
     def __init_assets(self) -> None:
@@ -137,6 +159,7 @@ class Resolver():
     def focus(self) -> None:
         """ Focuses pygame window.
         """
+        print("Window focused!")
         util.raise_window(pygame.display.get_caption()[0])
 
     def show_error(self, title, err_txt) -> None:
