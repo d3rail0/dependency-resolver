@@ -5,15 +5,10 @@ from queue import Queue, LifoQueue
 
 class Graph(ABC):
 
-    def __init__(self, capacity) -> None:
+    def __init__(self) -> None:
         self._name2node = {}
         self._node2name = []
-        self._adj_matrix = []
-
-        for _ in range(capacity):
-            self._adj_matrix.append([0]*capacity)
-
-        self.__capacity = capacity
+        self._adj_nodes = []
 
     @abstractmethod
     def add_vertex(self, name: str):
@@ -31,12 +26,53 @@ class Graph(ABC):
         
     def get_vertex_name(self, vertex:int) -> str:
         return self._node2name[vertex]
+    
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    def __len__(self) -> int:
+        return len(self._node2name)
+
+    def __getitem__(self, vertex: int) -> list[int]:
+        return self._adj_nodes[vertex]
+    
+    def safe_add_vertex(self, name: str) -> int:
+        """ Adds new vertex to the graph only
+        if it doesn't exist already.
+        Returns index of the new (or existing) vertex.
+        """
+        v_id = self.get_vertex_id(name)
+        if v_id == -1:
+            return self.add_vertex(name)
+        return v_id
+
+    def _base_add_vertex(self, name: str) -> int:
+        """ Adds new vertex to the graph
+        and returns its index.
+        """
+        if name in self._name2node:
+            raise RuntimeError(f"Vertex {name} already exists")
+
+        self._name2node[name] = len(self)
+        self._node2name.append(name)
+        
+        return self._name2node.get(name)
+
+class GraphMatrix(Graph):
+
+    def __init__(self, capacity) -> None:
+        super().__init__()
+
+        for _ in range(capacity):
+            self._adj_nodes.append([0]*capacity)
+
+        self.__capacity = capacity
 
     def get_capacity(self) -> int:
         return self.__capacity
 
     def get_matrix_str(self) -> str:
-        return str(self._adj_matrix)
+        return str(self._adj_nodes)
 
     def __str__(self) -> str:
         return ("{\n" +
@@ -47,16 +83,7 @@ class Graph(ABC):
                )
            + 
         "\n}")
-
-    def __repr__(self) -> str:
-        return self.__str__()
-
-    def __len__(self) -> int:
-        return len(self._node2name)
     
-    def __getitem__(self, vertex: int) -> list[int]:
-        return self._adj_matrix[vertex]
-
     def get_neighbors_out(self, vertex:int) -> list[int]:
         return [vrtx for vrtx, is_neighbour in enumerate(self[vertex]) if is_neighbour!=0]
 
@@ -67,14 +94,71 @@ class Graph(ABC):
             if self[vrtx][vertex] != 0
         ]
 
-class DirectedGraph(Graph):
+    def add_vertex(self, name: str) -> int:
+
+        if len(self) >= self.get_capacity():
+            raise MemoryError("Not enough capacity to store another vertex")
+
+        super()._base_add_vertex(name)
+
+        return self._name2node.get(name)
+
+    def _final_add_edge(self, u:int, v:int):
+        self._adj_nodes[u][v] = 1
+
+    def reverse_edge(self, u:int, v:int) -> None:
+        self[u][v], self[v][u] = self[v][u], self[u][v]
+
+class GraphAdjList(Graph):
+
+    def __init__(self) -> None:
+        super().__init__()
+        self._adj_nodes:list[list[int]] = []
+
+    def __str__(self) -> str:
+        return ("{\n" +
+            "\n".join(
+                [f'"{name}"' + ": [" + ",".join(
+                    [str(edge) for edge in self._adj_nodes[node_id]]
+                    ) + "]" for name,node_id in self._name2node.items()]
+                )
+            + 
+        "\n}")
+
+    def add_vertex(self, name: str) -> int:
+        super()._base_add_vertex(name)
+        self._adj_nodes.append([])
+        return self._name2node.get(name)
+
+    def _final_add_edge(self, u:int, v:int):
+        self._adj_nodes[u].append(v)
+
+    def reverse_edge(self, u:int, v:int) -> None:
+        if not u in self._adj_nodes[v]:
+            self._adj_nodes[v].append(u)
+            self._adj_nodes[u].remove(v)
+        else:
+            self._adj_nodes[u].append(v)
+            self._adj_nodes[v].remove(u)
+
+    def get_neighbors_out(self, vertex:int) -> list[int]:
+        return self._adj_nodes[vertex]
+
+    def get_neighbors_in(self, vertex:int) -> list[int]:
+        return [
+            vrtx 
+            for vrtx in range(0, len(self)) 
+            if vertex in self[vrtx]
+        ]
+
+class DirectedGraph(GraphAdjList):
 
     @property
     def reversed_edges(self):
         return self.__reversed_edges
 
-    def __init__(self, capacity:int) -> None:
-        super().__init__(capacity)
+    def __init__(self) -> None:
+        super().__init__()
         self.__reversed_edges: list[Tuple[int, int]] = []        
     
     def undo_reversed_edges(self) -> None:
@@ -86,38 +170,10 @@ class DirectedGraph(Graph):
         while len(self.__reversed_edges):
             self.reverse_edge(*self.__reversed_edges.pop())
 
-    def safe_add_vertex(self, name: str) -> int:
-        """ Adds new vertex to the graph only
-        if it doesn't exist already.
-        Returns index of the new (or existing) vertex.
-        """
-        v_id = self.get_vertex_id(name)
-        if v_id == -1:
-            return self.add_vertex(name)
-        return v_id
-
-    def add_vertex(self, name: str) -> int:
-        """ Adds new vertex to the graph
-        and returns its index.
-        """
-        if name in self._name2node:
-            raise RuntimeError(f"Vertex {name} already exists")
-
-        if len(self) >= self.get_capacity():
-            raise MemoryError("Not enough capacity to store another vertex")
-
-        self._name2node[name] = len(self)
-        self._node2name.append(name)
-        
-        return self._name2node.get(name)
-
     def add_edge(self, id_u: Union[int, str], id_v: Union[int, str]) -> None:        
         u = self._name2node.get(id_u) if type(id_u) is str else id_u
         v = self._name2node.get(id_v) if type(id_v) is str else id_v
-        self[u][v] = 1
-
-    def reverse_edge(self, u:int, v:int) -> None:
-        self[u][v], self[v][u] = self[v][u], self[u][v]
+        self._final_add_edge(u, v)
 
     def remove_cycle_and_sort(self) -> list[int]:
         """ Removes a cycle (if present) from a graph, then creates a topological order 
