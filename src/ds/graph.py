@@ -1,5 +1,5 @@
 import enum
-from typing import Union
+from typing import Tuple, Union
 from abc import ABC, abstractmethod
 from queue import Queue, LifoQueue
 
@@ -23,6 +23,12 @@ class Graph(ABC):
     def add_edge(self, id_u: Union[int, str], id_v: Union[int, str]):
         raise NotImplementedError()
 
+    def get_vertex_id(self, vertex_name: str) -> int:
+        """ Returns an index of the specified vertex name.
+        If the vertex doesn't exist, -1 is returned.
+        """
+        return self._name2node.get(vertex_name, -1)
+        
     def get_vertex_name(self, vertex:int) -> str:
         return self._node2name[vertex]
 
@@ -35,7 +41,7 @@ class Graph(ABC):
     def __str__(self) -> str:
         return ("{\n" +
            "\n".join(
-               [f'"{name}"' + ": [" + ",".join(
+               [f'"{name}" | {node_id}' + ": [" + ",".join(
                    [str(vrtx) for vrtx in self.get_neighbors_out(node_id)]
                    ) + "]" for name,node_id in self._name2node.items()]
                )
@@ -63,9 +69,33 @@ class Graph(ABC):
 
 class DirectedGraph(Graph):
 
+    @property
+    def reversed_edges(self):
+        return self.__reversed_edges
+
     def __init__(self, capacity:int) -> None:
-        super().__init__(capacity)        
+        super().__init__(capacity)
+        self.__reversed_edges: list[Tuple[int, int]] = []        
     
+    def undo_reversed_edges(self) -> None:
+        """ Fix graph state by returning reversed edges
+        back to their exact initial state. The only edges
+        that it affects are those caused by calling 
+        remove_cycle_and_sort() method.
+        """
+        while len(self.__reversed_edges):
+            self.reverse_edge(*self.__reversed_edges.pop())
+
+    def safe_add_vertex(self, name: str) -> int:
+        """ Adds new vertex to the graph only
+        if it doesn't exist already.
+        Returns index of the new (or existing) vertex.
+        """
+        v_id = self.get_vertex_id(name)
+        if v_id == -1:
+            return self.add_vertex(name)
+        return v_id
+
     def add_vertex(self, name: str) -> int:
         """ Adds new vertex to the graph
         and returns its index.
@@ -89,15 +119,17 @@ class DirectedGraph(Graph):
     def reverse_edge(self, u:int, v:int) -> None:
         self[u][v], self[v][u] = self[v][u], self[u][v]
 
-    def remove_cycle_and_sort(self):
-        """ Removes a cycle (if present) from a graph, creates a topological order 
-        for the acyclic graph.
-        Returns: 2-tuple of topological order and all edges reversed for cycle removal
+    def remove_cycle_and_sort(self) -> list[int]:
+        """ Removes a cycle (if present) from a graph, then creates a topological order 
+        for the acyclic graph. Calling this method can alter graph in presence of cycles
+        by reversing a couple of edges.
+        All state changes will be saved into "reversed_edges" list. Graph can return to its
+        initial state by calling undo_reversed_edges() method.
+        Returns: topological order of the (non-)altered graph.
         """
-        rev_edges  = LifoQueue(maxsize=len(self))
 
         if len(self) == 0:
-            return [], rev_edges
+            return []
 
         source_vts = Queue(maxsize=len(self))
         temp_vts   = Queue(maxsize=len(self))
@@ -114,13 +146,13 @@ class DirectedGraph(Graph):
         for vtx_id in V:
             if indeg[vtx_id] == 0:
                 source_vts.put(vtx_id)
-
-        topological_order = []
         
         if source_vts.qsize()==0:
             # no source vertices were found, hence
             # the graph is a complete cycle (ring)
-            return [], rev_edges
+            return []
+        
+        topological_order = []
 
         try:
 
@@ -128,10 +160,12 @@ class DirectedGraph(Graph):
                 
                 while source_vts.qsize():
 
-                    source_vertex          = source_vts.get()
-                    is_done[source_vertex] = True
+                    source_vertex = source_vts.get()
 
-                    topological_order.append(source_vertex)
+                    if not is_done[source_vertex]:
+                        topological_order.append(source_vertex)
+                    
+                    is_done[source_vertex] = True
 
                     for vx_out in self.get_neighbors_out(source_vertex):
                         indeg[vx_out] -= 1
@@ -151,18 +185,14 @@ class DirectedGraph(Graph):
 
                         for vx_out in self.get_neighbors_in(temp_vtx):
                             if not is_done[vx_out]:
-                                self.reverse_edge(vx_out,temp_vtx)
-                                rev_edges.put((vx_out, temp_vtx))
+                                self.reverse_edge(vx_out,temp_vtx)                                
+                                self.__reversed_edges.append((vx_out, temp_vtx))
                                 indeg[vx_out] += 1
                         
                         source_vts.put(temp_vtx)
 
         except Exception as ex:
-            # Fix graph state first by reverse all edges
-            # back to their initial state
-            while rev_edges.qsize():
-                self.reverse_edge(*rev_edges.get())
-
+            self.undo_reversed_edges()
             raise ex
 
-        return topological_order, rev_edges
+        return topological_order
