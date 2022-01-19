@@ -1,5 +1,6 @@
 import os
 from typing import Tuple
+import typing
 from clang.cindex import TranslationUnit, FileInclusion, Index
 from global_logger import Log
 
@@ -9,10 +10,12 @@ class DependencyScanner:
 
     glob_log: Log = Log.get_logger(name="DepdendencyScanner", logs_dir=os.path.abspath("./log"))
 
-    def __init__(self) -> None:
+    def __init__(self, progress_cb: typing.Callable[[int, int, str], None] = None) -> None:
         self.cindex = Index.create()
+        self.__progress_cb = progress_cb
 
-    def __norm_path(self, path:str) -> str:
+    @staticmethod
+    def normalize_path(path:str) -> str:
         return path.replace("\\", "/")
     
     def is_valid_project_file(self, filename:str) -> int:
@@ -46,7 +49,7 @@ class DependencyScanner:
         )
 
         return [
-            self.__norm_path(str(incl.include)) for incl in translation_unit.get_includes()
+            DependencyScanner.normalize_path(str(incl.include)) for incl in translation_unit.get_includes()
             if incl.depth == 1
         ]
 
@@ -57,14 +60,21 @@ class DependencyScanner:
         a list of its dependencies.
         """
 
-        path_dir = self.__norm_path(path_dir) 
+        path_dir = DependencyScanner.normalize_path(path_dir) 
 
         self.glob_log.info(f"Scan started {path_dir}")
 
         dep_map = {}
         project_files = self.get_project_files(path_dir)
 
-        for (file, file_type) in project_files:
+        for i, (file, file_type) in enumerate(project_files):
+
+            file = DependencyScanner.normalize_path(file)
+            
+            # Report progress to the caller
+            if self.__progress_cb:
+                self.__progress_cb(i, len(project_files), file.replace(path_dir, ""))
+
             includes = self.get_includes(file)
             dep_map[file] = includes
         
