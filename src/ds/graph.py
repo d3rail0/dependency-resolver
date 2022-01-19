@@ -187,8 +187,8 @@ class DirectedGraph(GraphAdjList):
         if len(self) == 0:
             return []
 
-        source_vts = Queue(maxsize=len(self))
-        temp_vts   = Queue(maxsize=len(self))
+        source_vts = Queue()
+        temp_vts   = Queue()
         is_done    = [False] * len(self)
         indeg      = [0]     * len(self)
         outdeg     = [0]     * len(self)
