@@ -40,8 +40,9 @@ class Menu(State):
 
     def _update_ui(self, dt, actions):
         for control_key in self.buttons:
-            self.buttons.get(control_key).update(
-                dt, self.resolver.mouse_x, self.resolver.mouse_y, actions["m_up"]
+            btn = self.buttons.get(control_key)
+            btn.update(
+                dt, self.resolver.scr_mouse_x, self.resolver.scr_mouse_y, actions["m_up"]
             )
 
     def update(self, delta_time, actions):
@@ -61,8 +62,7 @@ class Menu(State):
 
         elif self.buttons[self.CMD_EXIT].is_clicked():
             self.exit_state()
-
-        self.resolver.reset_keys()
+            self.resolver.reset_keys()
 
     def _render_ui(self, display):
         for control_key in self.buttons:
