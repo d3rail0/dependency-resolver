@@ -106,7 +106,7 @@ class Scan(State):
 
                 self.stage = ScanStage.ALL_COMPLETED
 
-                world_state = World(self.resolver, self.digraph, top_ordering, layerings)
+                world_state = World(self.target_project_dir, self.resolver, self.digraph, top_ordering, layerings)
                 self.exit_state()
                 world_state.enter_state()
 
