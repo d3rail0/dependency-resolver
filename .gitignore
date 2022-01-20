@@ -1,7 +1,10 @@
 notes.txt
-test.py
+tests/*
+test*.py
 *.exe
 .vscode
+logs/*
+MyTinySTL-master
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
