@@ -2,3 +2,4 @@ pygccxml
 libclang
 global_logger
 pygame
+pywin32
