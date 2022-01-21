@@ -102,14 +102,22 @@ class Scan(State):
             elif self.stage == ScanStage.CONSTRUCT_GRAPH:
                 
                 top_ordering, layerings = self.th_scanner.join()
+
                 self.th_scanner = None
+                
+                if len(top_ordering) == 0:
+                    self.resolver.show_error(
+                        "Topological order is empty",
+                        "The whole graph is cyclic. There is not support for visualising these as of yet."
+                    )
+                    self.exit_state()
+                else:
+                    world_state = World(self.target_project_dir, self.resolver, self.digraph, top_ordering, layerings)
+                    self.exit_state()
+                    world_state.enter_state()
 
                 self.stage = ScanStage.ALL_COMPLETED
-
-                world_state = World(self.target_project_dir, self.resolver, self.digraph, top_ordering, layerings)
-                self.exit_state()
-                world_state.enter_state()
-
+                
         self.resolver.reset_keys()
 
     def render(self, display):
