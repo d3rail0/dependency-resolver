@@ -51,6 +51,13 @@ class World(State):
         self.holding_node  = None
         self.is_panning    = False
         
+        # Warning for cycle
+        self.warning_message = ""
+        self.warning_image   = pygame.image.load(os.path.join(self.resolver.images_dir, "warning_32_32.png"))
+        self.show_warning    = False
+        self.is_full_cycle   = False
+
+        self.__init_warning()
         self.__init_nodes()
 
         self.digraph.undo_reversed_edges()
@@ -64,7 +71,6 @@ class World(State):
                 colors.BLUE
             )
 
-        offset_x        = 0
         horizontal_step = 300
         vertical_step   = 400
         node_width      = 150
@@ -76,18 +82,8 @@ class World(State):
         print(f"{self.layering.layers=}")
         print(f"{self.layering.topological_order=}")
 
-        missing_nodes = []
-
-        for vtx_id in range(len(self.digraph)):
-
-            if vtx_id not in self.layering.topological_order:
-                missing_nodes.append(vtx_id)
-                print(f"missing node {vtx_id} => {self.digraph.get_vertex_name(vtx_id)}")
-
-                for out_vtx_id in range(len(self.digraph.get_neighbors_out(vtx_id))):
-                    print(f"\t -> {self.digraph.get_vertex_name(out_vtx_id)}")
-
-        print(f"{missing_nodes=}")
+        if self.is_full_cycle:
+            return
 
         elements_in_layer = [0] * (max(self.layering.layers)+1)
 
@@ -114,7 +110,18 @@ class World(State):
             *self.nodes[self.layering.topological_order[-1]].center
         )
 
-
+    def __init_warning(self) -> None:
+        if len(self.digraph) != 0 and len(self.layering.topological_order) == 0:
+            # Graph is a fully cycle, turn on the warning.
+            self.warning_message = "All vertices are in the cycle"
+            self.show_warning  = True
+            self.is_full_cycle = True 
+        elif len(self.reversed_edges) != 0:
+            # Some edges were reversed in order to remove a cycle from the graph
+            self.warning_message = "Cyclic dependency detected"
+            self.show_warning  = True
+            self.is_full_cycle = False
+            
     def update_nodes(self, dt, actions):
         for node_id in self.nodes:
             node: Button = self.nodes.get(node_id)
@@ -203,10 +210,24 @@ class World(State):
                 start, end = self.choose_pivot_points(node0, node1)
 
             self.draw_arrow(display, colors.YELLOW, colors.YELLOW, start, end, 10, 3, 0, False)
-            
+    
+    def render_warning(self, display: pygame.Surface):
+        if not self.show_warning:
+            return
+
+        offset_y = (20 + self.warning_image.get_height())
+
+        self.resolver.draw_text(
+            display, self.warning_message, colors.YELLOW,
+            64, self.camera.VIEW_HEIGHT - offset_y + 4
+        )
+
+        display.blit(self.warning_image, (20, self.camera.VIEW_HEIGHT - offset_y))
+
     def render(self, display):
         display.fill(colors.DARK_GREY)
         self.render_nodes(display)
+        self.render_warning(display)
 
     def draw_circle(self, display, x, y, radius, color):
         """ Draws antialiased circle.
