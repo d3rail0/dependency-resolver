@@ -151,16 +151,22 @@ class Resolver():
     def __init_assets(self) -> None:
         self.assets_dir = os.path.join("assets")
         self.font_dir   = os.path.join(self.assets_dir, "fonts")
+        self.images_dir = os.path.join(self.assets_dir, "images")
         self.font       = pygame.font.Font(os.path.join(self.font_dir, "NunitoRegular-vmABZ.ttf"), 20)
 
     def __init_states(self) -> None:
         self.menu_state = Menu(self)
         self.state_stack.append(self.menu_state)
 
-    def draw_text(self, surface, text, color, x, y) -> None:        
-        text_surface     = self.font.render(text, True, color)
-        text_rect        = text_surface.get_rect()
-        text_rect.center = (x, y)
+    def draw_text(self, surface, text, color, x, y, center=False) -> None:        
+        text_surface      = self.font.render(text, True, color)
+        text_rect         = text_surface.get_rect()
+
+        if center:
+            text_rect.center = (x,y)
+        else:
+            text_rect.topleft = (x,y)
+
         surface.blit(text_surface, text_rect)
 
     def reset_keys(self) -> None:
