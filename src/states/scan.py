@@ -130,7 +130,7 @@ class Scan(State):
 
         with self.progress_lock:
             self.resolver.draw_text(display, self.top_text, 
-            self.text_color, self.resolver.VIEW_W/2, self.resolver.VIEW_H/2 - self.resolver.font.get_height())
+            self.text_color, self.resolver.VIEW_W/2, self.resolver.VIEW_H/2 - self.resolver.font.get_height(), True)
 
             self.resolver.draw_text(display, self.bottom_text, 
-            self.text_color, self.resolver.VIEW_W/2, self.resolver.VIEW_H/2 + self.resolver.font.get_height() )
+            self.text_color, self.resolver.VIEW_W/2, self.resolver.VIEW_H/2 + self.resolver.font.get_height(), True )
