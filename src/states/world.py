@@ -60,7 +60,10 @@ class World(State):
         self.__init_warning()
         self.__init_nodes()
 
+        # Return graph back to its initial state (with cycle if it had one)
         self.digraph.undo_reversed_edges()
+        # Perform a proper layering on initial graph state
+        layering.proper_layering()
 
     def __init_nodes(self):
 
@@ -71,40 +74,44 @@ class World(State):
                 colors.BLUE
             )
 
-        horizontal_step = 300
-        vertical_step   = 400
-        node_width      = 150
-        node_height     = 50
+        self.horizontal_step = 300
+        self.vertical_step   = 400
+        self.node_width      = 150
+        self.node_height     = 50
         
         print(f"Total vertices = {len(self.digraph)}")
         print(f"order len = {len(self.layering.topological_order)}")
+        
         print(f"{self.reversed_edges=}")
         print(f"{self.layering.layers=}")
         print(f"{self.layering.topological_order=}")
+        print(f"{self.layering.dummy_traversing_edges=}")
 
         if self.is_full_cycle:
             return
 
-        elements_in_layer = [0] * (max(self.layering.layers)+1)
+        for layer in self.layering.layers:
+            layer: Layer
 
-        for vtx_id in self.layering.topological_order:
+            # Create initial nodes and leave empty spaces in places of dummy vertices
+            for i, vtx_id in enumerate(layer.nodes):
+                
+                if vtx_id == -1:
+                    continue
 
-            curr_layer = self.layering.layers[vtx_id]
-            elements_in_layer[curr_layer] += 1
-            
-            node_text = self.digraph.get_vertex_name(vtx_id)
+                node_text = self.digraph.get_vertex_name(vtx_id)
 
-            if self.project_dir in node_text:
-                node_text = node_text.replace(self.project_dir, "")
-            else:
-                node_text = os.path.basename(node_text)
+                if self.project_dir in node_text:
+                    node_text = node_text.replace(self.project_dir, "")
+                else:
+                    node_text = os.path.basename(node_text)
 
-            self.nodes[vtx_id] = Button(
-                elements_in_layer[curr_layer]*horizontal_step + node_width/2, curr_layer*vertical_step + node_height/2,
-                node_width, node_height, common_props, node_text
-            )
+                self.nodes[vtx_id] = Button(
+                    i*self.horizontal_step + self.node_width/2, layer.level*self.vertical_step + self.node_height/2,
+                    self.node_width, self.node_height, common_props, node_text
+                )
 
-            #print(f"{node_text} {curr_layer=} => {self.nodes[vtx_id].x} & {self.nodes[vtx_id].y} | size: {self.nodes[vtx_id].size}")
+                print(f"{i}. {node_text} {layer.level=} => {self.nodes[vtx_id].x} & {self.nodes[vtx_id].y} | size: {self.nodes[vtx_id].size}")
         
         self.camera.move_to(
             *self.nodes[self.layering.topological_order[-1]].center
@@ -185,6 +192,34 @@ class World(State):
 
         return (from_wx, from_wy), (to_wx, to_wy)
 
+    def draw_traversal_line(self, display, node_start_id:int, node_end_id:int, is_cyclic = False):
+        line_color  = colors.CYAN if not is_cyclic else colors.YELLOW
+        arrow_color = colors.GREEN if not is_cyclic else colors.YELLOW
+
+        start_node, end_node = self.nodes[node_start_id], self.nodes[node_end_id]
+        pos_start, pos_end = self.choose_pivot_points(start_node, end_node)
+
+        neg_factor = -1 if is_cyclic else 1
+        
+        if (node_start_id in self.layering.dummy_traversing_edges and 
+            node_end_id in self.layering.dummy_traversing_edges.get(node_start_id)):
+
+            # Draw lines in between dummy vertexes and finally, draw the arrow to the destination vertex.   
+            new_pos = (int(pos_start[0]), int(pos_start[1] - neg_factor * start_node.height/2))
+            
+            for dummy_vertex_out in self.layering.dummy_traversing_edges[node_start_id][node_end_id]:
+                new_pos = (
+                    dummy_vertex_out * self.horizontal_step + start_node.width, 
+                    new_pos[1] + self.vertical_step * neg_factor
+                )
+
+                pygame.draw.line( display, line_color, self.world_to_screen(*pos_start), self.world_to_screen(*new_pos), 2)
+
+                pos_start = new_pos
+                
+        self.draw_arrow(display, line_color, arrow_color, pos_start, pos_end, 10, 2, 0, not is_cyclic)
+
+
     def render_nodes(self, display):
         for node_id in self.nodes:
             node: Button = self.nodes.get(node_id)
@@ -196,20 +231,20 @@ class World(State):
             # Draw outward lines
             for vtx_out in self.digraph.get_neighbors_out(node_id):
 
-                start, end = self.choose_pivot_points(node, self.nodes[vtx_out])
+                if (vtx_out, node_id) in self.reversed_edges or (node_id, vtx_out) in self.reversed_edges:
+                    continue
 
-                self.draw_arrow(display, colors.CYAN, colors.GREEN, start, end, 10, 2, 0, True)
+                self.draw_traversal_line(
+                    display,
+                    node_id, vtx_out,
+                    False
+                )
 
         for rev_edge in self.reversed_edges:
-            node0 = self.nodes[rev_edge[0]]
-            node1 = self.nodes[rev_edge[1]]
-
             if rev_edge[0] in self.digraph.get_neighbors_out(rev_edge[1]):
-                start, end = self.choose_pivot_points(node1, node0)
+                self.draw_traversal_line(display, rev_edge[1], rev_edge[0], True)
             else:
-                start, end = self.choose_pivot_points(node0, node1)
-
-            self.draw_arrow(display, colors.YELLOW, colors.YELLOW, start, end, 10, 3, 0, False)
+                self.draw_traversal_line(display, rev_edge[0], rev_edge[1], True)
     
     def render_warning(self, display: pygame.Surface):
         if not self.show_warning:
