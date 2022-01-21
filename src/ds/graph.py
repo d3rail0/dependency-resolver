@@ -240,7 +240,7 @@ class DirectedGraph(GraphAdjList):
                     if not is_done[temp_vtx] and outdeg[temp_vtx]>0:
 
                         for vx_out in self.get_neighbors_in(temp_vtx):
-                            if not is_done[vx_out]:
+                            if not is_done[vx_out] and vx_out != temp_vtx:
                                 self.reverse_edge(vx_out,temp_vtx)                                
                                 self.__reversed_edges.append((vx_out, temp_vtx))
                                 indeg[vx_out] += 1
