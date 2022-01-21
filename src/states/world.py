@@ -191,10 +191,7 @@ class World(State):
 
                 start, end = self.choose_pivot_points(node, self.nodes[vtx_out])
 
-                pygame.draw.line(display, colors.CYAN, 
-                                self.world_to_screen(*start), 
-                                self.world_to_screen(*end), 
-                                2)
+                self.draw_arrow(display, colors.CYAN, colors.GREEN, start, end, 10, 2, 0, True)
 
         for rev_edge in self.reversed_edges:
             node0 = self.nodes[rev_edge[0]]
@@ -205,7 +202,7 @@ class World(State):
             else:
                 start, end = self.choose_pivot_points(node0, node1)
 
-            self.draw_arrow(display, colors.YELLOW, colors.YELLOW, start, end, 10, 3, 0)
+            self.draw_arrow(display, colors.YELLOW, colors.YELLOW, start, end, 10, 3, 0, False)
             
     def render(self, display):
         display.fill(colors.DARK_GREY)
@@ -217,7 +214,7 @@ class World(State):
         gfxdraw.aacircle(display, x, y, radius, color)
         gfxdraw.filled_circle(display, x, y, radius, color)
 
-    def draw_arrow(self, display, lcolor, tricolor, start, end, trirad, lwidth = 2, ah_width = 2):
+    def draw_arrow(self, display, lcolor, tricolor, start, end, trirad, lwidth = 2, ah_width = 2, arrow_from_start: bool = False):
         pygame.draw.line(display,
                         lcolor,
                         self.world_to_screen(*start),
@@ -225,19 +222,29 @@ class World(State):
                         lwidth)
 
         rotation = math.degrees(math.atan2(start[1]-end[1], end[0]-start[0]))+90
+
+        arrow_start_x = end[0]
+        arrow_start_y = end[1]
+
+        if arrow_from_start:
+            arrow_start_x, arrow_start_y = (
+                (end[0]+start[0])/2, 
+                (start[1]+end[1])/2
+            )
+
         p1 = self.world_to_screen(
-            end[0]+trirad*math.sin(math.radians(rotation)),
-            end[1]+trirad*math.cos(math.radians(rotation))
+            arrow_start_x+trirad*math.sin(math.radians(rotation)),
+            arrow_start_y+trirad*math.cos(math.radians(rotation))
         )
 
         p2 = self.world_to_screen(
-            end[0]+trirad*math.sin(math.radians(rotation-120)), 
-            end[1]+trirad*math.cos(math.radians(rotation-120))
+            arrow_start_x+trirad*math.sin(math.radians(rotation-120)), 
+            arrow_start_y+trirad*math.cos(math.radians(rotation-120))
         )
 
         p3 = self.world_to_screen(
-            end[0]+trirad*math.sin(math.radians(rotation+120)), 
-            end[1]+trirad*math.cos(math.radians(rotation+120))
+            arrow_start_x+trirad*math.sin(math.radians(rotation+120)), 
+            arrow_start_y+trirad*math.cos(math.radians(rotation+120))
         )
 
         pygame.draw.polygon(
