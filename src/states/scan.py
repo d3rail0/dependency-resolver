@@ -7,7 +7,7 @@ from src.utils import util
 import src.ui.colors as colors
 from src.scanner import DependencyScanner
 from src.ds.graph import DirectedGraph, LifoQueue
-from src.node_layering import longest_path_layering
+from src.node_layering import *
 from src.states.world import World
 
 import os, time
@@ -72,7 +72,10 @@ class Scan(State):
             self.digraph.safe_add_vertex(source_file)
             for included_file in self.dependencies[source_file]:
                 self.digraph.safe_add_vertex(included_file)
-                self.digraph.add_edge(included_file, source_file)
+
+                # prevent files with improper includes or "self includes"
+                if not included_file == source_file:
+                    self.digraph.add_edge(included_file, source_file)
 
         self.update_status("GRAPH", "Removing cycles and applying toposort...", colors.YELLOW)
 
@@ -81,7 +84,9 @@ class Scan(State):
 
         self.update_status("GRAPH", "Finding longest path layering...", colors.MAGENTA)
 
-        return top_order, longest_path_layering(self.digraph, top_order)
+        layering = Layering(self.digraph, top_order)
+        layering.compute_layers()
+        return layering
 
     def update(self, delta_time, actions):
 
@@ -101,18 +106,18 @@ class Scan(State):
 
             elif self.stage == ScanStage.CONSTRUCT_GRAPH:
                 
-                top_ordering, layerings = self.th_scanner.join()
+                layering = self.th_scanner.join()
 
                 self.th_scanner = None
                 
-                if len(top_ordering) == 0:
+                if len(layering.layers) == 0:
                     self.resolver.show_error(
                         "Topological order is empty",
-                        "The whole graph is cyclic. There is not support for visualising these as of yet."
+                        "The whole graph is cyclic. There is no support for visualising these as of yet."
                     )
                     self.exit_state()
                 else:
-                    world_state = World(self.target_project_dir, self.resolver, self.digraph, top_ordering, layerings)
+                    world_state = World(self.target_project_dir, self.resolver, self.digraph, layering)
                     self.exit_state()
                     world_state.enter_state()
 
