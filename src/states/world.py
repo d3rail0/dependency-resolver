@@ -1,3 +1,5 @@
+from hmac import digest
+from src.node_layering import *
 from src.ds.graph import DirectedGraph
 from src.states.state import *
 from src.ui import colors
@@ -26,15 +28,14 @@ class World(State):
                 project_dir, 
                 resolver, 
                 digraph: DirectedGraph, 
-                topological_ordering: list[int], 
-                layerings: list[int]):
+                layering: Layering):
 
         super().__init__(resolver)
 
         self.project_dir          = project_dir
         self.digraph              = digraph
-        self.topological_ordering = topological_ordering
-        self.layerings            = layerings
+
+        self.layering = layering
 
         self.camera = Camera(self.resolver.VIEW_W, self.resolver.VIEW_H, 0.1)
 
@@ -50,7 +51,6 @@ class World(State):
         self.holding_node  = None
         self.is_panning    = False
         
-        self.__init_layers()
         self.__init_nodes()
 
         self.digraph.undo_reversed_edges()
@@ -70,15 +70,30 @@ class World(State):
         node_width      = 150
         node_height     = 50
         
+        print(f"Total vertices = {len(self.digraph)}")
+        print(f"order len = {len(self.layering.topological_order)}")
         print(f"{self.reversed_edges=}")
-        print(f"{self.layerings=}")
-        print(f"{self.topological_ordering=}")
+        print(f"{self.layering.layers=}")
+        print(f"{self.layering.topological_order=}")
 
-        elements_in_layer = [0] * (max(self.layerings)+1)
+        missing_nodes = []
 
-        for vtx_id in self.topological_ordering:
+        for vtx_id in range(len(self.digraph)):
 
-            curr_layer = self.layerings[vtx_id]
+            if vtx_id not in self.layering.topological_order:
+                missing_nodes.append(vtx_id)
+                print(f"missing node {vtx_id} => {self.digraph.get_vertex_name(vtx_id)}")
+
+                for out_vtx_id in range(len(self.digraph.get_neighbors_out(vtx_id))):
+                    print(f"\t -> {self.digraph.get_vertex_name(out_vtx_id)}")
+
+        print(f"{missing_nodes=}")
+
+        elements_in_layer = [0] * (max(self.layering.layers)+1)
+
+        for vtx_id in self.layering.topological_order:
+
+            curr_layer = self.layering.layers[vtx_id]
             elements_in_layer[curr_layer] += 1
             
             node_text = self.digraph.get_vertex_name(vtx_id)
@@ -96,24 +111,16 @@ class World(State):
             #print(f"{node_text} {curr_layer=} => {self.nodes[vtx_id].x} & {self.nodes[vtx_id].y} | size: {self.nodes[vtx_id].size}")
         
         self.camera.move_to(
-            *self.nodes[self.topological_ordering[-1]].center
+            *self.nodes[self.layering.topological_order[-1]].center
         )
 
-    def __init_layers(self):
-        self.node_positons = {
-            0: Vector2(0, 0),
-            4: Vector2(40, 0),
-            1: Vector2(self.resolver.VIEW_W, 0),
-            2: Vector2(0, self.resolver.VIEW_H),
-            3: Vector2(self.resolver.VIEW_W, self.resolver.VIEW_H),
-        }
 
     def update_nodes(self, dt, actions):
         for node_id in self.nodes:
             node: Button = self.nodes.get(node_id)
             node.update(dt, self.rel_mouse_x, self.rel_mouse_y, actions["m_up"])
 
-            if not self.holding_node and actions['m_down'] and node.is_hovered():
+            if not self.holding_node and actions['m_down'] and node.is_hovered() and not self.is_panning:
                 self.holding_node = node
 
         if self.holding_node:
@@ -157,6 +164,20 @@ class World(State):
         if self.is_panning:
              self.start_pan_x, self.start_pan_y = self.resolver.scr_mouse_x, self.resolver.scr_mouse_y 
 
+    def choose_pivot_points(self, src_node: Button, dest_node: Button) -> Tuple[Tuple[int,int], Tuple[int,int]]:
+
+        from_wx, from_wy = src_node.center
+        to_wx, to_wy     = dest_node.center
+    
+        if from_wy > to_wy:
+            from_wy -= src_node.height/2
+            to_wy += dest_node.height/2
+        else:
+            from_wy += src_node.height/2
+            to_wy -= dest_node.height/2
+
+        return (from_wx, from_wy), (to_wx, to_wy)
+
     def render_nodes(self, display):
         for node_id in self.nodes:
             node: Button = self.nodes.get(node_id)
@@ -167,32 +188,12 @@ class World(State):
 
             # Draw outward lines
             for vtx_out in self.digraph.get_neighbors_out(node_id):
-                
-                is_rev_edge = False
 
-                for rev_edge in self.reversed_edges:
-                    
-                    if vtx_out in rev_edge and node_id in rev_edge:   
-                        is_rev_edge = True
-                        break
-                
-                if is_rev_edge:
-                    continue
-
-                from_wx, from_wy = node.center
-                to_wx, to_wy = self.nodes[vtx_out].center
-            
-                if from_wy > to_wy:
-                    from_wy -= node.height/2
-                    # to_wy += node.height/2 + (10 if is_rev_edge else 0)
-                    to_wy += node.height/2
-                else:
-                    from_wy += node.height/2
-                    to_wy -= node.height/2
+                start, end = self.choose_pivot_points(node, self.nodes[vtx_out])
 
                 pygame.draw.line(display, colors.CYAN, 
-                                self.world_to_screen(from_wx, from_wy), 
-                                self.world_to_screen(to_wx, to_wy), 
+                                self.world_to_screen(*start), 
+                                self.world_to_screen(*end), 
                                 2)
 
         for rev_edge in self.reversed_edges:
@@ -200,48 +201,15 @@ class World(State):
             node1 = self.nodes[rev_edge[1]]
 
             if rev_edge[0] in self.digraph.get_neighbors_out(rev_edge[1]):
-                # 1 is source 
-                from_wx, from_wy = node1.center
-                to_wx, to_wy = node0.center
+                start, end = self.choose_pivot_points(node1, node0)
             else:
-                from_wx, from_wy = node0.center
-                to_wx, to_wy = node1.center
+                start, end = self.choose_pivot_points(node0, node1)
 
-            if from_wy > to_wy:
-                from_wy -= node.height/2
-                to_wy += node.height/2
-            else:
-                from_wy += node.height/2
-                to_wy -= node.height/2
-
-            self.draw_arrow(display, colors.YELLOW, colors.YELLOW, (from_wx, from_wy), (to_wx, to_wy), 10, 3, 0)
+            self.draw_arrow(display, colors.YELLOW, colors.YELLOW, start, end, 10, 3, 0)
             
-
     def render(self, display):
-        # print(rel_mouse_pos)
         display.fill(colors.DARK_GREY)
-
         self.render_nodes(display)
-
-        rel_mouse_pos = (self.rel_mouse_x, self.rel_mouse_y)
-
-        # for node, pos in self.node_positons.items():
-        #     translated_pos = self.world_to_screen(*pos)
-        #     is_hovered = (
-        #     rel_mouse_pos[0] > pos.x - 20 and
-        #     rel_mouse_pos[0] < pos.x + 20 and
-        #     rel_mouse_pos[1] > pos.y - 20 and 
-        #     rel_mouse_pos[1] < pos.y + 20)
-        #     self.draw_circle(display, int(translated_pos.x), int(translated_pos.y), int(20 * self.camera.zoom_factor), colors.RED if not is_hovered else colors.YELLOW)
-
-        # self.resolver.draw_text(display, "topol = " + str(self.topological_ordering), 
-        #     colors.WHITE, self.camera.VIEW_WIDTH/2, self.camera.VIEW_HEIGHT/2 - self.resolver.font.get_height())
-
-        # self.resolver.draw_text(display, "layers = " + str(self.layerings), 
-        #     colors.WHITE, self.resolver.VIEW_W/2, self.resolver.VIEW_H/2 + self.resolver.font.get_height() )
-
-        # self.resolver.draw_text(display, "reversed = " + str(self.digraph.reversed_edges), 
-        #     colors.WHITE, self.resolver.VIEW_W/2, self.resolver.VIEW_H/2 + 2*self.resolver.font.get_height() )
 
     def draw_circle(self, display, x, y, radius, color):
         """ Draws antialiased circle.
