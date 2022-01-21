@@ -32,7 +32,7 @@ class Menu(State):
         center_y = self.resolver.VIEW_H/2 - btn_height/2 - btn_height*1.5
 
         self.buttons[self.CMD_CHOOSE] = Button(
-            center_x, center_y, btn_width, btn_height, common_props, "Start"
+            center_x, center_y, btn_width, btn_height, common_props, "Select"
         )
         self.buttons[self.CMD_EXIT] = Button(
             center_x, center_y + len(self.buttons)*btn_height*1.5, btn_width, btn_height, common_props, "Exit"
