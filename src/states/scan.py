@@ -110,16 +110,9 @@ class Scan(State):
 
                 self.th_scanner = None
                 
-                if len(layering.layers) == 0:
-                    self.resolver.show_error(
-                        "Topological order is empty",
-                        "The whole graph is cyclic. There is no support for visualising these as of yet."
-                    )
-                    self.exit_state()
-                else:
-                    world_state = World(self.target_project_dir, self.resolver, self.digraph, layering)
-                    self.exit_state()
-                    world_state.enter_state()
+                world_state = World(self.target_project_dir, self.resolver, self.digraph, layering)
+                self.exit_state()
+                world_state.enter_state()
 
                 self.stage = ScanStage.ALL_COMPLETED
                 
