@@ -76,7 +76,7 @@ class Button():
         )
         surface.blit(
             pygame.transform.scale(
-                text_surface, (text_rect.size[0]*scale, text_rect.size[1]*scale)
+                text_surface, (int(text_rect.size[0]*scale), int(text_rect.size[1]*scale))
             ),
             text_rect
         )
@@ -94,10 +94,10 @@ class Button():
             display,
             target_color,
             (
-                (self.__rect.x - offset_x) * scale,
-                (self.__rect.y - offset_y) * scale,
-                self.__rect.width * scale,
-                self.__rect.height * scale
+                int((self.__rect.x - offset_x) * scale),
+                int((self.__rect.y - offset_y) * scale),
+                int(self.__rect.width * scale),
+                int(self.__rect.height * scale)
             )
         )
 

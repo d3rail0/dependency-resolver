@@ -167,9 +167,9 @@ class Resolver():
         text_rect         = text_surface.get_rect()
 
         if center:
-            text_rect.center = (x,y)
+            text_rect.center = (int(x),int(y))
         else:
-            text_rect.topleft = (x,y)
+            text_rect.topleft = (int(x),int(y))
 
         surface.blit(text_surface, text_rect)
 
