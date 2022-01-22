@@ -237,7 +237,7 @@ class DirectedGraph(GraphAdjList):
                         if not is_done[temp_vtx] and outdeg[temp_vtx]>0:
                             break
                     
-                    if not is_done[temp_vtx] and outdeg[temp_vtx]>0:
+                    if temp_vtx >= 0 and not is_done[temp_vtx] and outdeg[temp_vtx]>0:
 
                         for vx_out in self.get_neighbors_in(temp_vtx):
                             if not is_done[vx_out] and vx_out != temp_vtx:
