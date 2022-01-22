@@ -1,7 +1,4 @@
-import pygame
-from pygame import gfxdraw
 from pygame.math import Vector2
-import math
 
 class Camera:
 

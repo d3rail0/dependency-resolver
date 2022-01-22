@@ -1,16 +1,13 @@
-from subprocess import CompletedProcess
-from typing import Tuple
-
 import pygame
 from src.states.state import *
 from src.utils import util
 import src.ui.colors as colors
 from src.scanner import DependencyScanner
-from src.ds.graph import DirectedGraph, LifoQueue
+from src.ds.graph import DirectedGraph
 from src.node_layering import *
 from src.states.world import World
 
-import os, time
+import os
 from global_logger import Log
 import threading
 

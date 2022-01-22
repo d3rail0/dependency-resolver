@@ -1,16 +1,10 @@
 from src.ds.graph import *
 
-class Node: 
-
-    def __init__(self, node_id, is_dummy:bool = False) -> None:
-        self.node_id = node_id
-        self.is_dummy = is_dummy
-
 class Layer:
 
     def __init__(self, layer_level) -> None:
         self.level = layer_level
-        self.nodes: list[Node] = []        
+        self.nodes: list[int] = []        
 
 class Layering:
 

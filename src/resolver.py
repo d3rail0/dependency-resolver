@@ -1,5 +1,4 @@
-import math
-import sys, os, time
+import os, time
 import src.utils.util as util 
 
 os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = '1'
@@ -14,8 +13,6 @@ import pygame
 
 # State
 from src.states.menu import Menu
-
-from src.camera import Camera
 
 class Resolver():
 

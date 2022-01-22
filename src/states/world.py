@@ -1,4 +1,3 @@
-from hmac import digest
 from src.node_layering import *
 from src.ds.graph import DirectedGraph
 from src.states.state import *
@@ -95,7 +94,7 @@ class World(State):
         print(f"order len = {len(self.layering.topological_order)}")
         
         print(f"{self.reversed_edges=}")
-        print(f"{self.layering.layers=}")
+        print(f"layers:\n{self.layering.layers_to_str()}")
         print(f"{self.layering.topological_order=}")
         print(f"{self.layering.dummy_traversing_edges=}")
 

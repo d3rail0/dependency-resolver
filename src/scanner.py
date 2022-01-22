@@ -1,7 +1,7 @@
 import os
 from typing import Tuple
 import typing
-from clang.cindex import TranslationUnit, FileInclusion, Index
+from clang.cindex import TranslationUnit, Index
 from global_logger import Log
 
 class DependencyScanner:
