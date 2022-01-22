@@ -32,3 +32,22 @@ DRT is a small proof-of-concept tool developed for a semester project to show ho
 ## Demo
 
 ![Project showcase](demo.gif)
+
+## References
+
+- https://www.tcs.uni-luebeck.de/downloads/papers/2011/2011-configurable-graph-drawing-algorithms-jannis-pohlmann.pdf
+- http://atom3.cs.mcgill.ca/people/denis/atom3layout/files/DenisThesisTwoSideBook.pdf
+- https://iris.polito.it/retrieve/handle/11583/2622803/326613/final.pdf
+- https://www.research-collection.ethz.ch/bitstream/handle/20.500.11850/505558/1/thesis.pdf
+- https://d-nb.info/1023081776/34 - Hierarchical Drawing of Directed Graphs
+- https://publications.lib.chalmers.se/records/fulltext/161388.pdf
+
+Websites: 
+- https://pvigier.github.io/2018/02/09/dependency-graph.html
+- https://deepsource.io/blog/introduction-static-code-analysis/
+- http://www.logarithmic.net/pfh/blog/01208083168
+- https://eli.thegreenplace.net/2011/07/03/parsing-c-in-python-with-clang
+- https://davis.wpi.edu/~matt/courses/graphs/
+- http://www.graphviz.org/documentation/TSE93.pdf
+- https://llvm.org/devmtg/2010-11/Gregor-libclang.pdf
+- http://faculty.cs.niu.edu/~freedman/340/340notes/340graph.htm
