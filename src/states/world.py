@@ -57,6 +57,8 @@ class World(State):
         self.show_warning    = False
         self.is_full_cycle   = False
 
+        self.bends_enabled = True
+
         self.__init_warning()
         self.__init_nodes()
 
@@ -153,9 +155,12 @@ class World(State):
 
         if actions['m_up']:
             self.is_panning = False
-        if actions['m_down'] and not self.is_panning:
+        elif actions['m_down'] and not self.is_panning:
             self.is_panning = True
             self.start_pan_x, self.start_pan_y = self.resolver.scr_mouse_x, self.resolver.scr_mouse_y 
+        elif actions['space']:
+            self.bends_enabled = not self.bends_enabled
+            actions['space'] = False
 
         if not math.isclose(self.resolver.zoom_delta, 0.0):
             bf_zoom_x, bf_zoom_y = self.rel_mouse_x, self.rel_mouse_y
@@ -199,23 +204,24 @@ class World(State):
         start_node, end_node = self.nodes[node_start_id], self.nodes[node_end_id]
         pos_start, pos_end = self.choose_pivot_points(start_node, end_node)
 
-        neg_factor = -1 if is_cyclic else 1
-        
-        if (node_start_id in self.layering.dummy_traversing_edges and 
-            node_end_id in self.layering.dummy_traversing_edges.get(node_start_id)):
-
-            # Draw lines in between dummy vertexes and finally, draw the arrow to the destination vertex.   
-            new_pos = (int(pos_start[0]), int(pos_start[1] - neg_factor * start_node.height/2))
+        if self.bends_enabled:
+            neg_factor = -1 if is_cyclic else 1
             
-            for dummy_vertex_out in self.layering.dummy_traversing_edges[node_start_id][node_end_id]:
-                new_pos = (
-                    dummy_vertex_out * self.horizontal_step + start_node.width, 
-                    new_pos[1] + self.vertical_step * neg_factor
-                )
+            if (node_start_id in self.layering.dummy_traversing_edges and 
+                node_end_id in self.layering.dummy_traversing_edges.get(node_start_id)):
 
-                pygame.draw.line( display, line_color, self.world_to_screen(*pos_start), self.world_to_screen(*new_pos), 2)
+                # Draw lines in between dummy vertexes and finally, draw the arrow to the destination vertex.   
+                new_pos = (int(pos_start[0]), int(pos_start[1] - neg_factor * start_node.height/2))
+                
+                for dummy_vertex_out in self.layering.dummy_traversing_edges[node_start_id][node_end_id]:
+                    new_pos = (
+                        dummy_vertex_out * self.horizontal_step + start_node.width, 
+                        new_pos[1] + self.vertical_step * neg_factor
+                    )
 
-                pos_start = new_pos
+                    pygame.draw.line( display, line_color, self.world_to_screen(*pos_start), self.world_to_screen(*new_pos), 2)
+
+                    pos_start = new_pos
                 
         self.draw_arrow(display, line_color, arrow_color, pos_start, pos_end, 10, 2, 0, not is_cyclic)
 
@@ -263,6 +269,8 @@ class World(State):
         display.fill(colors.DARK_GREY)
         self.render_nodes(display)
         self.render_warning(display)
+
+        self.resolver.draw_text(display, "SPACE - enable/disable line bends", colors.WHITE, self.camera.VIEW_WIDTH - 170, self.camera.VIEW_HEIGHT - 32, True)
 
     def draw_circle(self, display, x, y, radius, color):
         """ Draws antialiased circle.

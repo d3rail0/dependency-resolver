@@ -42,7 +42,7 @@ class Resolver():
         self.is_running  = True
         self.state_stack = []
         self.fps_list    = []
-        self.actions     = {"left": False, "right": False, "up" : False, "down" : False, "m_down" : False, "m_up" : False, "escape": False}
+        self.actions     = {"m_down" : False, "m_up" : False, "escape": False, "space": True}
         
         self.dt     , self.prev_time = 0, 0
 
@@ -112,9 +112,13 @@ class Resolver():
             elif e.type == pygame.KEYDOWN:
                 if e.key == pygame.K_ESCAPE:
                     self.actions['escape'] = True
+                elif e.key == pygame.K_SPACE:
+                    self.actions['space'] = True
             elif e.type == pygame.KEYUP:
                 if e.key == pygame.K_ESCAPE:
                     self.actions['escape'] = False
+                elif e.key == pygame.K_SPACE:
+                    self.actions['space'] = False
                     
             self.__fix_mouse_pos()
           
