@@ -10,6 +10,15 @@ from pygame.math import Vector2
 from src.camera import Camera
 from src.ui.button import *
 
+class LineColors:
+
+    def __init__(self) -> None:
+        self.l_default   = colors.CYAN
+        self.l_cycle     = colors.YELLOW
+        self.arw_default = colors.GREEN
+        self.arw_cycle   = colors.YELLOW
+        self.highlight   = colors.MAGENTA
+
 class World(State):
 
     def world_to_screen(self, world_x, world_y) -> pygame.Vector2:
@@ -58,6 +67,7 @@ class World(State):
         self.is_full_cycle   = False
 
         self.bends_enabled = True
+        self.line_colors = LineColors()
 
         self.__init_warning()
         self.__init_nodes()
@@ -190,19 +200,23 @@ class World(State):
     
         if from_wy > to_wy:
             from_wy -= src_node.height/2
-            to_wy += dest_node.height/2
+            to_wy   += dest_node.height/2
         else:
             from_wy += src_node.height/2
-            to_wy -= dest_node.height/2
+            to_wy   -= dest_node.height/2
 
         return (from_wx, from_wy), (to_wx, to_wy)
 
     def draw_traversal_line(self, display, node_start_id:int, node_end_id:int, is_cyclic = False):
-        line_color  = colors.CYAN if not is_cyclic else colors.YELLOW
-        arrow_color = colors.GREEN if not is_cyclic else colors.YELLOW
+        line_color  = self.line_colors.l_default if not is_cyclic else self.line_colors.l_cycle
+        arrow_color = self.line_colors.arw_default if not is_cyclic else self.line_colors.arw_cycle
+
 
         start_node, end_node = self.nodes[node_start_id], self.nodes[node_end_id]
         pos_start, pos_end = self.choose_pivot_points(start_node, end_node)
+
+        if self.holding_node is start_node or self.holding_node is end_node:
+            line_color = self.line_colors.highlight
 
         if self.bends_enabled:
             neg_factor = -1 if is_cyclic else 1
