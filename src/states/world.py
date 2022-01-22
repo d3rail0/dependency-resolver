@@ -251,7 +251,10 @@ class World(State):
             # Draw outward lines
             for vtx_out in self.digraph.get_neighbors_out(node_id):
 
-                if (vtx_out, node_id) in self.reversed_edges or (node_id, vtx_out) in self.reversed_edges:
+                if (node_id, vtx_out) in self.reversed_edges:
+                    if not node_id in self.digraph.get_neighbors_out(vtx_out):
+                        continue
+                elif (vtx_out, node_id) in self.reversed_edges:
                     continue
 
                 self.draw_traversal_line(
