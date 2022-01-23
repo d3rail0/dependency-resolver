@@ -94,7 +94,7 @@ class World(State):
         print(f"order len = {len(self.layering.topological_order)}")
         
         print(f"{self.reversed_edges=}")
-        print(f"layers:\n{self.layering.layers_to_str()}")
+        print(f"layers:\n{self.layering=}")
         print(f"{self.layering.topological_order=}")
         print(f"{self.layering.dummy_traversing_edges=}")
 

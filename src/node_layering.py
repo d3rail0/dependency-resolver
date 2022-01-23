@@ -14,9 +14,6 @@ class Layering:
 
     @property
     def layers(self) -> list[Layer]:
-        """Returns: List of layer levels where item at index i represents
-        a layer level of a vertex i. 
-        """
         return self.__layers
 
     def __init__(self, graph: DirectedGraph, topological_order: list[int]) -> None:
@@ -31,8 +28,7 @@ class Layering:
 
 
     def compute_layers(self):
-        """ Computes min-height layers for vertices sorted in topological order
-        and.
+        """ Computes min-height layers for vertices sorted in topological order.
         """
         self.__node2layer = [1]*(len(self.graph))
 
@@ -75,10 +71,11 @@ class Layering:
                             self.dummy_traversing_edges[vtx][child_vtx].append(len(self.__layers[layer-1].nodes))
                             self.__layers[layer-1].nodes.append(-1)
                         
-        
-
-    def layers_to_str(self) -> str:
+    def __str__(self):
         resp = ""
         for layer in self.__layers:
             resp += str(layer.level) + " => " + str(layer.nodes) + "\n"
         return resp
+
+    def __repr__(self) -> str:
+        return self.__str__()
